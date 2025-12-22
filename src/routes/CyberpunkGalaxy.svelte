@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import * as THREE from 'three';
+	import type { Object3D, Points, Material } from 'three';
+	type ThreeModule = typeof import('three');
 
 	let container: HTMLDivElement | null = null;
 	let cleanup: (() => void) | null = null;
 
 	const pointer = { x: 0, y: 0 };
 
-	onMount(() => {
+	onMount(async () => {
 		if (!container) {
 			return;
 		}
+
+		const THREE: ThreeModule = await import('three');
 
 		const scene = new THREE.Scene();
 		scene.fog = new THREE.FogExp2('#030310', 0.06);
@@ -32,13 +35,13 @@
 		renderer.setSize(container.clientWidth, container.clientHeight);
 		container.appendChild(renderer.domElement);
 
-		const galaxy = createGalaxy();
+		const galaxy = createGalaxy(THREE);
 		scene.add(galaxy);
 
-		const halo = createHalo();
+		const halo = createHalo(THREE);
 		scene.add(halo);
 
-		const neonGrid = createNeonGrid();
+		const neonGrid = createNeonGrid(THREE);
 		scene.add(neonGrid);
 
 		scene.add(new THREE.AmbientLight('#50d8ff', 0.7));
@@ -117,7 +120,7 @@
 		cleanup?.();
 	});
 
-	function createGalaxy() {
+	function createGalaxy(THREE: ThreeModule) {
 		const geometry = new THREE.BufferGeometry();
 		const starCount = 6000;
 		const positions = new Float32Array(starCount * 3);
@@ -158,14 +161,14 @@
 			vertexColors: true,
 			transparent: true,
 			alphaTest: 0.02,
-			map: createParticleTexture(),
+			map: createParticleTexture(THREE),
 			blending: THREE.AdditiveBlending
 		});
 
 		return new THREE.Points(geometry, material);
 	}
 
-	function createHalo() {
+	function createHalo(THREE: ThreeModule) {
 		const geometry = new THREE.RingGeometry(2.5, 3.5, 128);
 		const material = new THREE.MeshBasicMaterial({
 			color: '#2bf4ff',
@@ -179,7 +182,7 @@
 		return halo;
 	}
 
-	function createNeonGrid() {
+	function createNeonGrid(THREE: ThreeModule) {
 		const grid = new THREE.Group();
 		const gridMaterial = new THREE.LineBasicMaterial({
 			color: '#52fffb',
@@ -213,7 +216,7 @@
 		return grid;
 	}
 
-	function createParticleTexture() {
+	function createParticleTexture(THREE: ThreeModule) {
 		const size = 64;
 		const canvas = document.createElement('canvas');
 		canvas.width = size;
@@ -242,30 +245,31 @@
 		return texture;
 	}
 
-	function disposeObject(object: THREE.Object3D) {
-		object.traverse((child: THREE.Object3D) => {
-			const geometry = (child as THREE.Mesh | THREE.Line | THREE.Points).geometry;
-			const material = (child as THREE.Mesh | THREE.Line | THREE.Points).material;
+	function disposeObject(object: Object3D) {
+		object.traverse((child: Object3D) => {
+			const geometry = (child as Object3D & { geometry?: { dispose: () => void } }).geometry;
+			const material = (child as Object3D & { material?: Material | Material[] }).material;
 
 			geometry?.dispose();
 
 			if (Array.isArray(material)) {
-				material.forEach((mat: THREE.Material) => mat.dispose());
+				material.forEach((mat: Material) => mat.dispose());
 			} else {
 				material?.dispose();
 			}
 		});
 	}
 
-	function disposePoints(points: THREE.Points) {
+	function disposePoints(points: Points) {
 		points.geometry.dispose();
 		if (Array.isArray(points.material)) {
-			points.material.forEach((mat: THREE.Material) => mat.dispose());
+			points.material.forEach((mat: Material) => mat.dispose());
 		} else {
 			points.material.dispose();
 		}
 	}
 </script>
+
 
 <section class="galaxy-panel">
 	<div class="content">
