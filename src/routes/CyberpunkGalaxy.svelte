@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import type { Object3D, Points, Material } from 'three';
+	import type { Object3D, Points, Material, Texture } from 'three';
 	type ThreeModule = typeof import('three');
 
 	let container: HTMLDivElement | null = null;
@@ -9,7 +9,7 @@
 	const pointer = { x: 0, y: 0 };
 
 	onMount(async () => {
-		if (!container) {
+		if (typeof window === 'undefined' || !container) {
 			return;
 		}
 
@@ -216,7 +216,11 @@
 		return grid;
 	}
 
-	function createParticleTexture(THREE: ThreeModule) {
+	function createParticleTexture(THREE: ThreeModule): Texture | null {
+		if (typeof document === 'undefined') {
+			return null;
+		}
+
 		const size = 64;
 		const canvas = document.createElement('canvas');
 		canvas.width = size;
