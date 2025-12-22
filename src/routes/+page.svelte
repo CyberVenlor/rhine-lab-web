@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CyberpunkGalaxy from './CyberpunkGalaxy.svelte';
+	export const ssr = false;
 </script>
 
 <main class="page">
