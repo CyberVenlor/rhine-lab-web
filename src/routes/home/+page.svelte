@@ -1,1 +1,0 @@
-<h1>Faker vs bin</h1>
