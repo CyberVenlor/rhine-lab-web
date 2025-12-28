@@ -172,11 +172,18 @@
 </section>
 
 <style>
+	:global(html, body) {
+		margin: 0;
+		height: 100%;
+		overflow: hidden;
+		touch-action: none;
+		background: radial-gradient(circle at top, #311f54 0%, #05030a 45%, #010101 100%);
+	}
+
 	:global(body) {
 		margin: 0;
 		font-family: 'JetBrains Mono', 'Share Tech Mono', 'Space Grotesk', system-ui, sans-serif;
-		background: radial-gradient(circle at top, #311f54 0%, #05030a 45%, #010101 100%);
-		min-height: 100vh;
+		min-height: 100%;
 		color: #f5f5ff;
 	}
 
