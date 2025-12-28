@@ -8,6 +8,15 @@ declare global {
 		// interface PageState {}
 		// interface Platform {}
 	}
+
+	interface ImportMetaEnv {
+		readonly VITE_LIGHT_WS_URL?: string;
+		readonly VITE_LIGHT_WS_PORT?: string;
+	}
+
+	interface ImportMeta {
+		readonly env: ImportMetaEnv;
+	}
 }
 
 export {};
