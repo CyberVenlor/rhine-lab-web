@@ -30,10 +30,9 @@
 		if (import.meta.env.VITE_LIGHT_WS_URL) {
 			return import.meta.env.VITE_LIGHT_WS_URL;
 		}
-		const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-		const host = window.location.hostname;
-		const port = import.meta.env.VITE_LIGHT_WS_PORT ?? '8080';
-		return `${protocol}://${host}:${port}/ws`;
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		const host = window.location.host;
+		return `${protocol}//${host}/ws`;
 	};
 
 	const cleanup = () => {
