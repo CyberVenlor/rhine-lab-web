@@ -73,6 +73,11 @@
 	let panStartY = 0;
 	let pointerStartX = 0;
 	let pointerStartY = 0;
+	const activePointers = new Map<number, { x: number; y: number }>();
+	let pinchActive = false;
+	let pinchLastDistance = 0;
+	let pinchLastCenterX = 0;
+	let pinchLastCenterY = 0;
 
 	const layoutPositions: Record<string, { x: number; y: number; depth: number }> = {
 		polymers: { x: 14, y: 7, depth: 1.2 },
@@ -335,18 +340,70 @@
 		}
 	};
 
+	const getPinchPair = () => {
+		const points = Array.from(activePointers.values());
+		if (points.length < 2) return null;
+		return [points[0], points[1]] as const;
+	};
+
+	const getPinchMetrics = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+		const dx = b.x - a.x;
+		const dy = b.y - a.y;
+		return {
+			distance: Math.hypot(dx, dy),
+			centerX: (a.x + b.x) / 2,
+			centerY: (a.y + b.y) / 2
+		};
+	};
+
 	const startPan = (event: PointerEvent) => {
 		const target = event.target as HTMLElement;
 		if (target.closest('.node')) return;
+		activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+		viewportEl.setPointerCapture(event.pointerId);
+		const pair = getPinchPair();
+		if (pair) {
+			const pinch = getPinchMetrics(pair[0], pair[1]);
+			pinchActive = true;
+			isPanning = false;
+			pinchLastDistance = Math.max(pinch.distance, 1);
+			pinchLastCenterX = pinch.centerX;
+			pinchLastCenterY = pinch.centerY;
+			return;
+		}
+		pinchActive = false;
 		isPanning = true;
 		panStartX = panX;
 		panStartY = panY;
 		pointerStartX = event.clientX;
 		pointerStartY = event.clientY;
-		viewportEl.setPointerCapture(event.pointerId);
 	};
 
 	const movePan = (event: PointerEvent) => {
+		if (!activePointers.has(event.pointerId)) return;
+		activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+		if (pinchActive) {
+			const pair = getPinchPair();
+			if (!pair) return;
+			const pinch = getPinchMetrics(pair[0], pair[1]);
+			const rect = viewportEl.getBoundingClientRect();
+			const centerX = pinch.centerX - rect.left;
+			const centerY = pinch.centerY - rect.top;
+			const prevZoom = zoom;
+			const scaleFactor = pinch.distance / Math.max(pinchLastDistance, 1);
+			const nextZoom = Math.min(2.4, Math.max(0.8, zoom * scaleFactor));
+			zoom = nextZoom;
+			let nextPanX = panX + centerX * (1 / zoom - 1 / prevZoom);
+			let nextPanY = panY + centerY * (1 / zoom - 1 / prevZoom);
+			nextPanX += (pinch.centerX - pinchLastCenterX) / Math.max(zoom, 0.0001);
+			nextPanY += (pinch.centerY - pinchLastCenterY) / Math.max(zoom, 0.0001);
+			applyPan(nextPanX, nextPanY, false);
+			pinchLastDistance = Math.max(pinch.distance, 1);
+			pinchLastCenterX = pinch.centerX;
+			pinchLastCenterY = pinch.centerY;
+			scheduleTransform();
+			return;
+		}
 		if (!isPanning) return;
 		const nextPanX = panStartX + (event.clientX - pointerStartX);
 		const nextPanY = panStartY + (event.clientY - pointerStartY);
@@ -403,14 +460,37 @@
 	};
 
 	const endPan = (event: PointerEvent) => {
-		isPanning = false;
+		activePointers.delete(event.pointerId);
 		if (viewportEl.hasPointerCapture(event.pointerId)) {
 			viewportEl.releasePointerCapture(event.pointerId);
 		}
+		const pair = getPinchPair();
+		if (pair) {
+			const pinch = getPinchMetrics(pair[0], pair[1]);
+			pinchActive = true;
+			isPanning = false;
+			pinchLastDistance = Math.max(pinch.distance, 1);
+			pinchLastCenterX = pinch.centerX;
+			pinchLastCenterY = pinch.centerY;
+			return;
+		}
+		pinchActive = false;
+		const rest = Array.from(activePointers.entries())[0];
+		if (rest) {
+			isPanning = true;
+			panStartX = panX;
+			panStartY = panY;
+			pointerStartX = rest[1].x;
+			pointerStartY = rest[1].y;
+			return;
+		}
+		isPanning = false;
 	};
 
 	const resetPointerState = () => {
 		isPanning = false;
+		pinchActive = false;
+		activePointers.clear();
 		clearHoveredNode();
 	};
 
