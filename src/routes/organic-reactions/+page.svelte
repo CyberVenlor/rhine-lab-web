@@ -610,23 +610,17 @@
 
 	const onWheel = (event: WheelEvent) => {
 		event.preventDefault();
-		// Trackpad two-finger pan maps to wheel delta without ctrl.
-		if (!event.ctrlKey) {
-			applyPan(panX - event.deltaX, panY - event.deltaY, true);
-			scheduleTransform();
-			return;
-		}
-		// Pinch zoom (ctrl+wheel) keeps cursor position stable.
+		// Default wheel behavior: zoom canvas around cursor.
 		const rect = viewportEl.getBoundingClientRect();
 		const cursorX = event.clientX - rect.left;
 		const cursorY = event.clientY - rect.top;
 		const prevZoom = zoom;
 		const oldPanX = panX;
 		const oldPanY = panY;
-		const factor = event.deltaY < 0 ? 1.03 : 0.97;
+		const factor = event.deltaY < 0 ? 1.05 : 0.95;
 		const nextZoom = Math.min(2.4, Math.max(0.8, zoom * factor));
 		zoom = nextZoom;
-		// Keep zoom centered on pointer for CSS zoom model:
+		// Keep zoom centered on pointer for transform model:
 		// screen = zoom * (world + pan)
 		const nextPanX = oldPanX + cursorX * (1 / zoom - 1 / prevZoom);
 		const nextPanY = oldPanY + cursorY * (1 / zoom - 1 / prevZoom);
