@@ -606,7 +606,16 @@
 
 	const onWheel = (event: WheelEvent) => {
 		event.preventDefault();
-		// Default wheel behavior: zoom canvas around cursor.
+		// Keep trackpad two-finger gesture for panning, while mouse wheel still zooms.
+		const absX = Math.abs(event.deltaX);
+		const absY = Math.abs(event.deltaY);
+		const likelyTrackpadPan = !event.ctrlKey && (absX > 0.01 || absY < 24);
+		if (likelyTrackpadPan) {
+			applyPan(panX - event.deltaX, panY - event.deltaY, true);
+			scheduleTransform();
+			return;
+		}
+		// Wheel zoom around cursor (mouse wheel / ctrl+wheel pinch).
 		const rect = viewportEl.getBoundingClientRect();
 		const cursorX = event.clientX - rect.left;
 		const cursorY = event.clientY - rect.top;
