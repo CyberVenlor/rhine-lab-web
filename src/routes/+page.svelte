@@ -12,6 +12,8 @@
 
 <main class="landing">
 	<Light />
+	<Light />
+	<Light />
 </main>
 
 <style>
