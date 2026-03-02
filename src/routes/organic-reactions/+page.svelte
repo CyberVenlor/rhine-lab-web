@@ -117,7 +117,7 @@
 		alkane: { x: 5, y: 5, depth: 1.04 },
 		alkene: { x: 22, y: 7, depth: 1.2 },
 		ketones: { x: 36, y: 23, depth: 1.3 },
-		alcohol: { x: 22, y: 28, depth: 0.8 },
+		alcohol: { x: 20, y: 28, depth: 0.9 },
 		aldehydes: { x: 36, y: 48, depth: 1.5 },
 		halogenoalkanes: { x: 3, y: 25, depth: 1.8 },
 		esters: { x: 30, y: 65, depth: 1.16 },
