@@ -18,6 +18,16 @@
 		labelAngle: number;
 		label: string;
 	};
+	type DecoBlock = {
+		id: string;
+		x: number;
+		y: number;
+		depth: number;
+		width: number;
+		height: number;
+		type: 'dots' | 'cross';
+		opacity?: number;
+	};
 
 	type Link = {
 		from: string;
@@ -50,22 +60,26 @@
 
 	let viewportEl: HTMLElement;
 	let stageEl: HTMLElement;
+	let titleEl: HTMLHeadingElement;
+	let titlePrimaryEl: HTMLSpanElement;
+	let titleMirrorEl: HTMLSpanElement;
 	const nodeEls = new Map<string, HTMLElement>();
 	const stageWidth = 1600;
 	const stageHeight = 1020;
-	let arrows: ArrowShape[] = [];
+	let arrows = $state<ArrowShape[]>([]);
 	let resizeObserver: ResizeObserver | null = null;
-	let zoom = 0.8;
+	let zoom = $state(0.8);
 	let panX = 60;
 	let panY = 0;
 	const panOriginX = panX;
 	const panOriginY = panY;
-	let parallaxPanX = panX;
-	let parallaxPanY = panY;
+	let parallaxPanX = $state(panX);
+	let parallaxPanY = $state(panY);
 	const panElasticPx = 110;
 	const panElasticResistance = 0.28;
 	const panFreeRangeWhenFitted = 150;
-	let hoveredNodeId: string | null = null;
+	const panLeftClampOffset = 0;
+	let hoveredNodeId = $state<string | null>(null);
 	let hoverClearTimer: number | null = null;
 	let transformFrame = 0;
 	let isPanning = false;
@@ -78,8 +92,14 @@
 	let pinchLastDistance = 0;
 	let pinchLastCenterX = 0;
 	let pinchLastCenterY = 0;
+	let titleShift = $state(0);
+	let titleCycleWidth = $state(0);
+	const titleScrollGain = 0.42;
+	const titleText = '// REACTIONS OF ORGANIC CHEMISTRY';
 
-	const layoutPositions: Record<string, { x: number; y: number; depth: number }> = {
+	type PositionedNode = (typeof organicNodes)[number] & { layoutX: number; layoutY: number; depth: number };
+
+	const layoutPositionsLandscape: Record<string, { x: number; y: number; depth: number }> = {
 		polymers: { x: 14, y: 7, depth: 1.2 },
 		ketones: { x: 35, y: 6, depth: 0.88 },
 		alkane: { x: 6, y: 28, depth: 1.04 },
@@ -92,24 +112,89 @@
 		nitrile: { x: 31, y: 72, depth: 1.1 },
 		'carboxylic-acid': { x: 48, y: 75, depth: 1.2 }
 	};
+	const layoutPositionsPortrait: Record<string, { x: number; y: number; depth: number }> = {
+		polymers: { x: 38, y: 7, depth: 1.2 },
+		alkane: { x: 5, y: 5, depth: 1.04 },
+		alkene: { x: 22, y: 7, depth: 1.2 },
+		ketones: { x: 36, y: 23, depth: 0.88 },
+		alcohol: { x: 25, y: 28, depth: 1.12 },
+		aldehydes: { x: 36, y: 48, depth: 0.82 },
+		halogenoalkanes: { x: 3, y: 25, depth: 1.3 },
+		esters: { x: 25, y: 55, depth: 1.16 },
+		amines: { x: 3, y: 48, depth: 1 },
+		nitrile: { x: 16, y: 40, depth: 1.1 },
+		'carboxylic-acid': { x: 5, y: 67, depth: 1.2 }
+	};
+	let isPortrait = $state(false);
 	const parallaxStrengthX = 1.1;
 	const parallaxStrengthY = 1.1;
 	const depthScaleStrength = 0.06;
+	const depthLayerBase = 120;
+	const depthLayerStep = 90;
+	const decoBlocks: DecoBlock[] = [
+		{ id: 'deco-01', x: 8, y: 8, depth: 0.82, width: 34, height: 30, type: 'dots', opacity: 0.82 },
+		{ id: 'deco-02', x: 16, y: 8, depth: 0.88, width: 48, height: 42, type: 'dots', opacity: 0.86 },
+		
+		{ id: 'deco-04', x: 32, y: 8, depth: 1.02, width: 78, height: 58, type: 'dots', opacity: 0.95 },
+	
 
-	const centeredNodes = organicNodes.map((node) => ({
-		...node,
-		layoutX: layoutPositions[node.id]?.x ?? 50,
-		layoutY: layoutPositions[node.id]?.y ?? 50,
-		depth: layoutPositions[node.id]?.depth ?? 1
-	}));
-	const startupOrder = [...centeredNodes]
-		.sort((a, b) => a.layoutX - b.layoutX || a.layoutY - b.layoutY)
-		.map((node) => node.id);
-	const startupIndexById = new Map(startupOrder.map((id, index) => [id, index]));
+		{ id: 'deco-07', x: 56, y: 8, depth: 1.2, width: 124, height: 92, type: 'dots', opacity: 0.84 },
+	
+
+		{ id: 'deco-10', x: 8, y: 26, depth: 1.16, width: 118, height: 74, type: 'dots', opacity: 0.91 },
+	
+		{ id: 'deco-12', x: 32, y: 26, depth: 0.96, width: 66, height: 48, type: 'dots', opacity: 0.85 },
+		{ id: 'deco-13', x: 44, y: 26, depth: 0.86, width: 42, height: 34, type: 'dots', opacity: 0.98 },
+		{ id: 'deco-14', x: 56, y: 26, depth: 1.22, width: 132, height: 96, type: 'dots', opacity: 0.87 },
+
+		{ id: 'deco-16', x: 80, y: 26, depth: 1.02, width: 72, height: 54, type: 'dots', opacity: 0.81 },
+		{ id: 'deco-17', x: 10, y: 44, depth: 0.9, width: 58, height: 44, type: 'dots', opacity: 0.88 },
+	
+		{ id: 'deco-19', x: 34, y: 44, depth: 1.18, width: 114, height: 84, type: 'dots', opacity: 0.83 },
+		{ id: 'deco-20', x: 46, y: 44, depth: 1.04, width: 82, height: 60, type: 'dots', opacity: 0.92 },
+		
+		{ id: 'deco-22', x: 70, y: 44, depth: 1.24, width: 138, height: 102, type: 'dots', opacity: 0.86 },
+		{ id: 'deco-23', x: 8, y: 62, depth: 1.08, width: 90, height: 66, type: 'dots', opacity: 0.9 },
+	
+		{ id: 'deco-25', x: 32, y: 62, depth: 0.88, width: 46, height: 34, type: 'dots', opacity: 0.95 },
+	
+		{ id: 'deco-27', x: 56, y: 62, depth: 1.14, width: 106, height: 78, type: 'dots', opacity: 0.97 },
+		
+		{ id: 'deco-29', x: 80, y: 62, depth: 0.84, width: 38, height: 30, type: 'dots', opacity: 0.93 },
+		{ id: 'deco-30', x: 10, y: 80, depth: 1.2, width: 126, height: 94, type: 'dots', opacity: 0.85 },
+	
+		{ id: 'deco-32', x: 34, y: 80, depth: 1, width: 76, height: 58, type: 'dots', opacity: 0.88 },
+		{ id: 'deco-33', x: 46, y: 80, depth: 0.9, width: 56, height: 42, type: 'dots', opacity: 0.98 },
+	
+		{ id: 'deco-35', x: 70, y: 80, depth: 1.16, width: 110, height: 82, type: 'dots', opacity: 0.91 }
+	];
+	let centeredNodes = $state<PositionedNode[]>([]);
+	let startupIndexById = $state<Record<string, number>>({});
 	const nodeBootDurationMs = 360;
 	const nodeBootStepMs = 72;
 	const arrowsRevealDelayMs = 300;
-	const startupTotalMs = (startupOrder.length - 1) * nodeBootStepMs + nodeBootDurationMs;
+	const startupTotalMs = (organicNodes.length - 1) * nodeBootStepMs + nodeBootDurationMs;
+
+	const depthToLayer = (depth: number) =>
+		Math.max(1, Math.round(depthLayerBase + (depth - 1) * depthLayerStep));
+
+	const rebuildLayout = () => {
+		const positions = isPortrait ? layoutPositionsPortrait : layoutPositionsLandscape;
+		const nodes = organicNodes.map((node) => ({
+			...node,
+			layoutX: positions[node.id]?.x ?? 50,
+			layoutY: positions[node.id]?.y ?? 50,
+			depth: positions[node.id]?.depth ?? 1
+		}));
+		const ordered = [...nodes].sort((a, b) => a.layoutX - b.layoutX || a.layoutY - b.layoutY);
+		const nextIndex: Record<string, number> = {};
+		for (let i = 0; i < ordered.length; i += 1) {
+			nextIndex[ordered[i].id] = i;
+		}
+		centeredNodes = nodes;
+		startupIndexById = nextIndex;
+	};
+	rebuildLayout();
 
 	const nodeParallaxStyle = (
 		layoutX: number,
@@ -125,7 +210,19 @@
 		const offsetX = deltaX * depthDelta * parallaxStrengthX;
 		const offsetY = deltaY * depthDelta * parallaxStrengthY;
 		const scale = Math.min(1.12, Math.max(0.92, 1 + depthDelta * depthScaleStrength));
-		return `left: calc(${layoutX}% + ${offsetX.toFixed(2)}px); top: calc(${layoutY}% + ${offsetY.toFixed(2)}px); --boot-delay: ${bootDelay}; --node-scale: ${scale.toFixed(3)};`;
+		const z = depthToLayer(depth);
+		return `left: calc(${layoutX}% + ${offsetX.toFixed(2)}px); top: calc(${layoutY}% + ${offsetY.toFixed(2)}px); --boot-delay: ${bootDelay}; --node-scale: ${scale.toFixed(3)}; z-index: ${z};`;
+	};
+
+	const decoParallaxStyle = (block: DecoBlock, currentParallaxPanX: number, currentParallaxPanY: number) => {
+		const deltaX = currentParallaxPanX - panOriginX;
+		const deltaY = currentParallaxPanY - panOriginY;
+		const depthDelta = block.depth - 1;
+		const offsetX = deltaX * depthDelta * parallaxStrengthX;
+		const offsetY = deltaY * depthDelta * parallaxStrengthY;
+		const z = depthToLayer(block.depth);
+		const alpha = block.opacity ?? 0.2;
+		return `left: calc(${block.x}% + ${offsetX.toFixed(2)}px); top: calc(${block.y}% + ${offsetY.toFixed(2)}px); width: ${block.width}px; height: ${block.height}px; opacity: ${alpha}; z-index: ${z}; transform: translate(-50%, -50%);`;
 	};
 
 	const formulas: Record<string, string> = {
@@ -323,7 +420,7 @@
 			return value;
 		};
 		return {
-			x: clampAxis(nextPanX, fitMinX, fitMaxX, panOriginX),
+			x: Math.min(clampAxis(nextPanX, fitMinX, fitMaxX, panOriginX), panOriginX + panLeftClampOffset),
 			y: clampAxis(nextPanY, fitMinY, fitMaxY, panOriginY)
 		};
 	};
@@ -334,10 +431,27 @@
 		const clamped = clampPan(nextPanX, nextPanY);
 		panX = clamped.x;
 		panY = clamped.y;
+		const moved = Math.abs(panX - prevPanX) + Math.abs(panY - prevPanY);
+		if (moved > 0 && titleCycleWidth > 0) {
+			titleShift += moved * titleScrollGain;
+			while (titleShift >= titleCycleWidth) {
+				titleShift -= titleCycleWidth;
+			}
+		}
 		if (affectParallax) {
 			parallaxPanX += panX - prevPanX;
 			parallaxPanY += panY - prevPanY;
 		}
+	};
+
+	const updateTitleCycle = () => {
+		if (!titlePrimaryEl || !titleMirrorEl) return;
+		titleCycleWidth = titleMirrorEl.offsetLeft - titlePrimaryEl.offsetLeft;
+		if (titleCycleWidth <= 0) {
+			titleShift = 0;
+			return;
+		}
+		titleShift = titleShift % titleCycleWidth;
 	};
 
 	const getPinchPair = () => {
@@ -545,6 +659,14 @@
 	};
 
 	onMount(() => {
+		const updateOrientation = () => {
+			const nextPortrait =
+				window.matchMedia('(orientation: portrait)').matches || window.innerHeight > window.innerWidth;
+			if (nextPortrait === isPortrait) return;
+			isPortrait = nextPortrait;
+			rebuildLayout();
+			scheduleTransform();
+		};
 		const blockNativeWheel = (event: WheelEvent) => {
 			event.preventDefault();
 		};
@@ -566,9 +688,15 @@
 		window.addEventListener('gestureend', blockNativeGesture as EventListener, { passive: false });
 		window.addEventListener('blur', onWindowBlur);
 
+		updateOrientation();
+		requestAnimationFrame(updateTitleCycle);
 		applyStageTransform();
 		requestAnimationFrame(refreshArrows);
-		const onResize = () => refreshArrows();
+		const onResize = () => {
+			updateOrientation();
+			updateTitleCycle();
+			refreshArrows();
+		};
 		window.addEventListener('resize', onResize);
 		resizeObserver = new ResizeObserver(refreshArrows);
 		resizeObserver.observe(stageEl);
@@ -596,7 +724,15 @@
 </svelte:head>
 
 <main class="page">
-	<h1>// REACTIONS OF ORGANIC CHEMISTRY</h1>
+	<h1 bind:this={titleEl}>
+		<span class="title-track" style={`transform: translateX(${-titleShift}px);`}>
+			<span bind:this={titlePrimaryEl}>{titleText}</span>
+			<span bind:this={titleMirrorEl} aria-hidden="true">{titleText}</span>
+			<span aria-hidden="true">{titleText}</span>
+			<span aria-hidden="true">{titleText}</span>
+			<span aria-hidden="true">{titleText}</span>
+		</span>
+	</h1>
 
 	<section class="map-wrap">
 		<div
@@ -604,12 +740,12 @@
 			bind:this={viewportEl}
 			role="application"
 			aria-label="Organic reactions canvas"
-			on:wheel={onWheel}
-			on:pointerdown={startPan}
-			on:pointermove={movePan}
-			on:pointerup={endPan}
-			on:pointercancel={endPan}
-			on:contextmenu={suppressContextMenu}
+			onwheel={onWheel}
+			onpointerdown={startPan}
+			onpointermove={movePan}
+			onpointerup={endPan}
+			onpointercancel={endPan}
+			oncontextmenu={suppressContextMenu}
 		>
 			<div class="stage" bind:this={stageEl}>
 				<aside
@@ -646,6 +782,16 @@
 					</g>
 				</svg>
 
+					{#each decoBlocks as block (block.id)}
+						<div
+							class="deco-block"
+							class:dots={block.type === 'dots'}
+							class:cross={block.type === 'cross'}
+							style={decoParallaxStyle(block, parallaxPanX, parallaxPanY)}
+							aria-hidden="true"
+						></div>
+					{/each}
+
 					{#each centeredNodes as node (node.id)}
 						<article
 							class="node"
@@ -654,13 +800,13 @@
 								node.layoutX,
 								node.layoutY,
 								node.depth,
-								startupIndexById.get(node.id) ?? 0,
+								startupIndexById[node.id] ?? 0,
 								parallaxPanX,
 								parallaxPanY
 							)}
 							use:registerNode={node.id}
-							on:mouseenter={(event) => onNodeMouseEnter(node.id, event)}
-						on:mouseleave={(event) => onNodeMouseLeave(node.id, event)}
+							onmouseenter={(event) => onNodeMouseEnter(node.id, event)}
+						onmouseleave={(event) => onNodeMouseLeave(node.id, event)}
 					>
 						<h2>{node.label}</h2>
 						<div class="molecule-layer">
@@ -712,6 +858,14 @@
 		color: #ffbf2f;
 		text-align: left;
 		white-space: nowrap;
+		overflow: hidden;
+	}
+
+	.title-track {
+		display: inline-flex;
+		align-items: center;
+		gap: 40px;
+		will-change: transform;
 	}
 
 	.map-wrap {
@@ -822,6 +976,38 @@
 		opacity: 0;
 		animation: node-boot 360ms steps(1, end) both;
 		animation-delay: calc(var(--boot-delay, 0) * 72ms);
+	}
+
+	.deco-block {
+		position: absolute;
+		pointer-events: none;
+		background-color: rgba(105, 112, 124, 0.08);
+		backdrop-filter: blur(0.4px);
+	}
+
+	.deco-block.dots {
+		background-color: transparent;
+		background-image: radial-gradient(rgba(178, 184, 193, 0.42) 1px, transparent 1px);
+		background-size: 12px 12px;
+	}
+
+	.deco-block.cross {
+		background-image:
+			linear-gradient(
+				45deg,
+				transparent 47%,
+				rgba(178, 184, 193, 0.44) 47%,
+				rgba(178, 184, 193, 0.44) 53%,
+				transparent 53%
+			),
+			linear-gradient(
+				-45deg,
+				transparent 47%,
+				rgba(178, 184, 193, 0.44) 47%,
+				rgba(178, 184, 193, 0.44) 53%,
+				transparent 53%
+			);
+		background-size: 18px 18px;
 	}
 
 	.node::before {
