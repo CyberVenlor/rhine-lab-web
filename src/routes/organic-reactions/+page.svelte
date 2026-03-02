@@ -100,30 +100,30 @@
 	type PositionedNode = (typeof organicNodes)[number] & { layoutX: number; layoutY: number; depth: number };
 
 	const layoutPositionsLandscape: Record<string, { x: number; y: number; depth: number }> = {
-		polymers: { x: 14, y: 7, depth: 1.2 },
-		ketones: { x: 35, y: 6, depth: 0.88 },
+		polymers: { x: 14, y: 7, depth: 1.6 },
+		ketones: { x: 35, y: 6, depth: 1.3 },
 		alkane: { x: 6, y: 28, depth: 1.04 },
 		alkene: { x: 25, y: 27, depth: 1.2 },
-		alcohol: { x: 45, y: 28, depth: 1.12 },
-		aldehydes: { x: 60, y: 6, depth: 0.82 },
-		halogenoalkanes: { x: 21, y: 49, depth: 1.3 },
+		alcohol: { x: 45, y: 28, depth: 0.8 },
+		aldehydes: { x: 60, y: 6, depth: 1.5 },
+		halogenoalkanes: { x: 21, y: 49, depth: 1.8 },
 		esters: { x: 45, y: 49, depth: 1.16 },
 		amines: { x: 9, y: 72, depth: 1 },
 		nitrile: { x: 31, y: 72, depth: 1.1 },
-		'carboxylic-acid': { x: 48, y: 75, depth: 1.2 }
+		'carboxylic-acid': { x: 48, y: 75, depth: 1.5 }
 	};
 	const layoutPositionsPortrait: Record<string, { x: number; y: number; depth: number }> = {
-		polymers: { x: 38, y: 7, depth: 1.2 },
+		polymers: { x: 38, y: 7, depth: 1.6 },
 		alkane: { x: 5, y: 5, depth: 1.04 },
 		alkene: { x: 22, y: 7, depth: 1.2 },
-		ketones: { x: 36, y: 23, depth: 0.88 },
-		alcohol: { x: 25, y: 28, depth: 1.12 },
-		aldehydes: { x: 36, y: 48, depth: 0.82 },
-		halogenoalkanes: { x: 3, y: 25, depth: 1.3 },
-		esters: { x: 25, y: 55, depth: 1.16 },
+		ketones: { x: 36, y: 23, depth: 1.3 },
+		alcohol: { x: 22, y: 28, depth: 0.8 },
+		aldehydes: { x: 36, y: 48, depth: 1.5 },
+		halogenoalkanes: { x: 3, y: 25, depth: 1.8 },
+		esters: { x: 30, y: 65, depth: 1.16 },
 		amines: { x: 3, y: 48, depth: 1 },
 		nitrile: { x: 16, y: 40, depth: 1.1 },
-		'carboxylic-acid': { x: 5, y: 67, depth: 1.2 }
+		'carboxylic-acid': { x: 5, y: 67, depth: 1.5 }
 	};
 	let isPortrait = $state(false);
 	const parallaxStrengthX = 1.1;
@@ -835,7 +835,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
-		padding: 0.8rem 1rem 1rem;
+		padding: 0.8rem 0 1rem;
 		background: #000;
 		color: #fff;
 		overflow: hidden;
