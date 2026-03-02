@@ -87,6 +87,7 @@
 	let panStartY = 0;
 	let pointerStartX = 0;
 	let pointerStartY = 0;
+	let arrowsRevealActive = $state(false);
 	const activePointers = new Map<number, { x: number; y: number }>();
 	let pinchActive = false;
 	let pinchLastDistance = 0;
@@ -357,6 +358,11 @@
 		}
 
 		arrows = result;
+		if (!arrowsRevealActive && result.length > 0) {
+			requestAnimationFrame(() => {
+				arrowsRevealActive = true;
+			});
+		}
 	};
 
 	const scheduleTransform = () => {
@@ -748,6 +754,7 @@
 				</aside>
 				<svg
 					class="arrows"
+					class:reveal-active={arrowsRevealActive}
 					viewBox={`0 0 ${stageWidth} ${stageHeight}`}
 					preserveAspectRatio="none"
 					style={`--arrows-reveal-duration: ${startupTotalMs}ms; --arrows-reveal-delay: ${arrowsRevealDelayMs}ms;`}
@@ -1082,6 +1089,11 @@
 		clip-path: inset(0 100% 0 0);
 		animation: arrows-reveal var(--arrows-reveal-duration, 1000ms) linear both;
 		animation-delay: var(--arrows-reveal-delay, 300ms);
+		animation-play-state: paused;
+	}
+
+	.arrows.reveal-active .arrows-reveal {
+		animation-play-state: running;
 	}
 
 	@keyframes dash-backward {
