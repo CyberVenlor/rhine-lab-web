@@ -69,12 +69,12 @@
 	let arrows = $state<ArrowShape[]>([]);
 	let resizeObserver: ResizeObserver | null = null;
 	let zoom = $state(0.8);
-	let panX = 60;
-	let panY = 0;
-	const panOriginX = panX;
-	const panOriginY = panY;
-	let parallaxPanX = $state(panX);
-	let parallaxPanY = $state(panY);
+	let panX = $state(60);
+	let panY = $state(0);
+	const panOriginX = 60;
+	const panOriginY = 0;
+	let parallaxPanX = $state(60);
+	let parallaxPanY = $state(0);
 	const panElasticPx = 110;
 	const panElasticResistance = 0.28;
 	const panFreeRangeWhenFitted = 150;
@@ -359,20 +359,10 @@
 		arrows = result;
 	};
 
-	const applyStageTransform = () => {
-		if (!stageEl) return;
-		// Avoid CSS zoom (mobile Safari mismatch). Use a standard matrix transform:
-		// screen = zoom * (world + pan)
-		const tx = panX * zoom;
-		const ty = panY * zoom;
-		stageEl.style.transform = `matrix(${zoom}, 0, 0, ${zoom}, ${tx}, ${ty})`;
-	};
-
 	const scheduleTransform = () => {
 		if (transformFrame) return;
 		transformFrame = requestAnimationFrame(() => {
 			transformFrame = 0;
-			applyStageTransform();
 			refreshArrows();
 		});
 	};
@@ -684,7 +674,6 @@
 
 		updateOrientation();
 		requestAnimationFrame(updateTitleCycle);
-		applyStageTransform();
 		requestAnimationFrame(refreshArrows);
 		const onResize = () => {
 			updateOrientation();
@@ -741,7 +730,11 @@
 			onpointercancel={endPan}
 			oncontextmenu={suppressContextMenu}
 		>
-			<div class="stage" bind:this={stageEl}>
+			<div
+				class="stage"
+				bind:this={stageEl}
+				style={`transform: matrix(${zoom}, 0, 0, ${zoom}, ${panX * zoom}, ${panY * zoom});`}
+			>
 				<aside
 					class="canvas-totem"
 					aria-label="Organic reactions strip"
