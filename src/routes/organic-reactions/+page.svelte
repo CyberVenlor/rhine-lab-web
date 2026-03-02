@@ -259,9 +259,11 @@
 
 	const applyStageTransform = () => {
 		if (!stageEl) return;
-		// Use layout zoom instead of transform scale to keep text/lines crisp when zooming.
-		stageEl.style.transform = `translate3d(${panX}px, ${panY}px, 0)`;
-		stageEl.style.zoom = `${zoom}`;
+		// Avoid CSS zoom (mobile Safari mismatch). Use a standard matrix transform:
+		// screen = zoom * (world + pan)
+		const tx = panX * zoom;
+		const ty = panY * zoom;
+		stageEl.style.transform = `matrix(${zoom}, 0, 0, ${zoom}, ${tx}, ${ty})`;
 	};
 
 	const scheduleTransform = () => {
