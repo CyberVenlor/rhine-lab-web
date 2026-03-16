@@ -179,7 +179,10 @@
 	let lastScrollY = 0;
 	let spinVelocity = 0;
 	let lookAtY = 0;
+	let pixelFrameCounter = 0;
 	let footerObserver: IntersectionObserver | null = null;
+	let pixelBufferCanvas: HTMLCanvasElement | null = null;
+	let pixelBufferContext: CanvasRenderingContext2D | null = null;
 	const loader = new OBJLoader();
 	const modelColors = ['#ff8a2a', '#ffb16a', '#ffd6b0', '#f5f7ff'].map((value) => new THREE.Color(value));
 	const modelSpecs = [
@@ -281,7 +284,9 @@
 	};
 
 	const renderPixelCards = () => {
-		if (!renderer) return;
+		if (!renderer || !pixelBufferCanvas || !pixelBufferContext) return;
+		const bufferCanvas = pixelBufferCanvas;
+		const bufferContext = pixelBufferContext;
 		const sourceCanvas = renderer.domElement;
 		const sourceRect = sourceCanvas.getBoundingClientRect();
 		if (!sourceRect.width || !sourceRect.height) return;
@@ -293,6 +298,9 @@
 			if (!cardEl || !targetCanvas) return;
 
 			const rect = cardEl.getBoundingClientRect();
+			if (rect.bottom < 0 || rect.top > viewportHeight || rect.right < 0 || rect.left > window.innerWidth) {
+				return;
+			}
 			const clippedWidth = Math.max(1, Math.min(rect.width, sourceRect.right - rect.left, rect.right - sourceRect.left));
 			const clippedHeight = Math.max(1, Math.min(rect.height, sourceRect.bottom - rect.top, rect.bottom - sourceRect.top));
 			if (clippedWidth <= 1 || clippedHeight <= 1) return;
@@ -304,19 +312,16 @@
 			const dotPitch = 7;
 			const lowWidth = Math.max(12, Math.round(rect.width / dotPitch));
 			const lowHeight = Math.max(10, Math.round(rect.height / dotPitch));
-
-			if (targetCanvas.width !== lowWidth || targetCanvas.height !== lowHeight) {
-				targetCanvas.width = lowWidth;
-				targetCanvas.height = lowHeight;
+			if (bufferCanvas.width !== lowWidth || bufferCanvas.height !== lowHeight) {
+				bufferCanvas.width = lowWidth;
+				bufferCanvas.height = lowHeight;
 			}
 
-			const context = targetCanvas.getContext('2d');
-			if (!context) return;
-			context.imageSmoothingEnabled = false;
-			context.clearRect(0, 0, lowWidth, lowHeight);
-			context.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, lowWidth, lowHeight);
+			bufferContext.imageSmoothingEnabled = false;
+			bufferContext.clearRect(0, 0, lowWidth, lowHeight);
+			bufferContext.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, lowWidth, lowHeight);
 
-			const pixels = context.getImageData(0, 0, lowWidth, lowHeight).data;
+			const pixels = bufferContext.getImageData(0, 0, lowWidth, lowHeight).data;
 			const outputWidth = Math.max(1, Math.round(rect.width));
 			const outputHeight = Math.max(1, Math.round(rect.height));
 			if (targetCanvas.width !== outputWidth || targetCanvas.height !== outputHeight) {
@@ -324,6 +329,8 @@
 				targetCanvas.height = outputHeight;
 			}
 
+			const context = targetCanvas.getContext('2d');
+			if (!context) return;
 			context.clearRect(0, 0, outputWidth, outputHeight);
 			const stepX = outputWidth / lowWidth;
 			const stepY = outputHeight / lowHeight;
@@ -371,12 +378,17 @@
 		camera.position.x = -2.7 + Math.sin(time * 0.00012) * 0.12;
 		camera.lookAt(-2.7, lookAtY, 0);
 		renderer.render(scene, camera);
-		renderPixelCards();
+		pixelFrameCounter = (pixelFrameCounter + 1) % 3;
+		if (pixelFrameCounter === 0) {
+			renderPixelCards();
+		}
 	};
 
 	onMount(() => {
 		mounted = true;
 		let destroyed = false;
+		pixelBufferCanvas = document.createElement('canvas');
+		pixelBufferContext = pixelBufferCanvas.getContext('2d', { willReadFrequently: true });
 		const bodyOverflow = document.body.style.overflow;
 		const htmlOverflow = document.documentElement.style.overflow;
 		document.body.style.overflow = 'hidden';
@@ -470,6 +482,8 @@
 			modelEntries.forEach((entry) => disposeObject(entry.pivot));
 			renderer?.dispose();
 			scene?.clear();
+			pixelBufferCanvas = null;
+			pixelBufferContext = null;
 			backgroundEl.querySelector('canvas')?.remove();
 		};
 	});
