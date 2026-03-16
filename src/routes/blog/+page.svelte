@@ -162,6 +162,7 @@
 	let pixelCardEls: HTMLElement[] = [];
 	let pixelCanvasEls: HTMLCanvasElement[] = [];
 	let mounted = false;
+	let resourcesReady = false;
 	let showHeartRain = false;
 	let heartRainTriggered = false;
 	let scrollY = 0;
@@ -376,6 +377,11 @@
 	onMount(() => {
 		mounted = true;
 		let destroyed = false;
+		const bodyOverflow = document.body.style.overflow;
+		const htmlOverflow = document.documentElement.style.overflow;
+		document.body.style.overflow = 'hidden';
+		document.documentElement.style.overflow = 'hidden';
+		window.scrollTo(0, 0);
 		updateViewport();
 
 		scene = new THREE.Scene();
@@ -428,25 +434,34 @@
 			footerObserver.observe(footerCardEl);
 		}
 
-		void Promise.all(modelSpecs.map((spec) => loadObj(spec.url))).then((loaded) => {
-			if (destroyed || !modelGroup) return;
-			modelEntries = loaded.map((source, index) => {
-				const spec = modelSpecs[index];
-				const pivot = new THREE.Group();
-				const root = prepareModel(source, spec.size);
-				const color = modelColors[index] ?? new THREE.Color('#ffffff');
-				pivot.position.set(spec.x, spec.y, 0);
-				pivot.rotation.set(spec.tiltX, spec.tiltY, spec.tiltZ);
-				root.position.z = spec.z;
-				updateWireColor(root, color);
-				pivot.add(root);
-				modelGroup?.add(pivot);
-				return { root, pivot, color };
+		void Promise.all(modelSpecs.map((spec) => loadObj(spec.url)))
+			.then((loaded) => {
+				if (destroyed || !modelGroup) return;
+				modelEntries = loaded.map((source, index) => {
+					const spec = modelSpecs[index];
+					const pivot = new THREE.Group();
+					const root = prepareModel(source, spec.size);
+					const color = modelColors[index] ?? new THREE.Color('#ffffff');
+					pivot.position.set(spec.x, spec.y, 0);
+					pivot.rotation.set(spec.tiltX, spec.tiltY, spec.tiltZ);
+					root.position.z = spec.z;
+					updateWireColor(root, color);
+					pivot.add(root);
+					modelGroup?.add(pivot);
+					return { root, pivot, color };
+				});
+			})
+			.finally(() => {
+				if (destroyed) return;
+				resourcesReady = true;
+				document.body.style.overflow = bodyOverflow;
+				document.documentElement.style.overflow = htmlOverflow;
 			});
-		});
 
 		return () => {
 			destroyed = true;
+			document.body.style.overflow = bodyOverflow;
+			document.documentElement.style.overflow = htmlOverflow;
 			window.removeEventListener('scroll', onScroll);
 			window.removeEventListener('resize', updateViewport);
 			if (frameId) cancelAnimationFrame(frameId);
@@ -482,15 +497,26 @@
 				education, intended major, awards, technical interests, personal traits, and my perspective
 				on AI.
 			</p>
-			<div class="scroll-cue" aria-hidden="true">
-				<span>Scroll</span>
-				<svg viewBox="0 0 24 24">
-					<path
-						d="M12 17.2a1 1 0 0 1-.7-.29l-5-5a1 1 0 1 1 1.4-1.42l4.3 4.3 4.3-4.3a1 1 0 1 1 1.4 1.42l-5 5a1 1 0 0 1-.7.29Z"
-						fill="currentColor"
-					/>
-				</svg>
-			</div>
+			{#if resourcesReady}
+				<div class="scroll-cue" aria-hidden="true">
+					<span>Scroll</span>
+					<svg viewBox="0 0 24 24">
+						<path
+							d="M12 17.2a1 1 0 0 1-.7-.29l-5-5a1 1 0 1 1 1.4-1.42l4.3 4.3 4.3-4.3a1 1 0 1 1 1.4 1.42l-5 5a1 1 0 0 1-.7.29Z"
+							fill="currentColor"
+						/>
+					</svg>
+				</div>
+			{:else}
+				<div class="scroll-cue loading-cue" aria-hidden="true">
+					<span>Loading</span>
+					<div class="loading-dots">
+						<i></i>
+						<i></i>
+						<i></i>
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<div class="quick-facts">
@@ -722,6 +748,34 @@
 		flex: 0 0 auto;
 	}
 
+	.loading-cue {
+		gap: 0.55rem;
+	}
+
+	.loading-dots {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.24rem;
+	}
+
+	.loading-dots i {
+		display: block;
+		width: 0.34rem;
+		height: 0.34rem;
+		border-radius: 999px;
+		background: currentColor;
+		opacity: 0.35;
+		animation: loading-pulse 0.9s ease-in-out infinite;
+	}
+
+	.loading-dots i:nth-child(2) {
+		animation-delay: 0.15s;
+	}
+
+	.loading-dots i:nth-child(3) {
+		animation-delay: 0.3s;
+	}
+
 	@keyframes scroll-cue-float {
 		0%,
 		100% {
@@ -731,6 +785,19 @@
 
 		50% {
 			transform: translateY(6px);
+			opacity: 0.92;
+		}
+	}
+
+	@keyframes loading-pulse {
+		0%,
+		100% {
+			transform: scale(0.72);
+			opacity: 0.28;
+		}
+
+		50% {
+			transform: scale(1);
 			opacity: 0.92;
 		}
 	}
