@@ -873,12 +873,36 @@
 	.meta-row span {
 		padding: 0.42rem 0.74rem;
 		border-radius: 999px;
-		background: rgba(255, 255, 255, 0.08);
-		border: 1px solid rgba(255, 255, 255, 0.12);
-		color: rgba(241, 247, 255, 0.82);
+		background: rgba(137, 169, 222, 0.18);
+		border: 1px solid rgba(176, 199, 235, 0.24);
+		color: rgba(232, 239, 249, 0.9);
 		font-size: 0.72rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
+	}
+
+	.meta-row span:nth-child(4n + 1) {
+		background: rgba(121, 162, 223, 0.18);
+		border-color: rgba(163, 191, 235, 0.24);
+		color: rgba(227, 236, 248, 0.9);
+	}
+
+	.meta-row span:nth-child(4n + 2) {
+		background: rgba(168, 136, 219, 0.18);
+		border-color: rgba(198, 173, 232, 0.24);
+		color: rgba(236, 229, 247, 0.9);
+	}
+
+	.meta-row span:nth-child(4n + 3) {
+		background: rgba(121, 191, 169, 0.18);
+		border-color: rgba(162, 216, 197, 0.24);
+		color: rgba(226, 241, 235, 0.9);
+	}
+
+	.meta-row span:nth-child(4n + 4) {
+		background: rgba(211, 156, 112, 0.18);
+		border-color: rgba(229, 188, 151, 0.24);
+		color: rgba(245, 234, 223, 0.9);
 	}
 
 	.story {
@@ -1063,6 +1087,17 @@
 		font-size: 1.06em;
 		text-shadow: 0 0 0.01px currentColor;
 		color: rgba(245, 248, 255, 0.96);
+	}
+
+	.pixel-card .meta-row {
+		position: relative;
+		z-index: 2;
+	}
+
+	.pixel-card .meta-row span {
+		position: relative;
+		z-index: 2;
+		background-clip: padding-box;
 	}
 
 	.pixel-card .eyebrow {
