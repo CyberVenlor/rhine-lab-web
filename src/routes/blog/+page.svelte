@@ -90,8 +90,8 @@
 		{
 			eyebrow: 'Awards',
 			title: 'Competition and academic results',
-			body: 'Selected recognitions include AMC 12 A/B AIME qualification, BMO Gold, CCC Gold, Physics Bowl Component 2 Gold, SMC Gold, ACSL Round 3, Global Game Jam Top 1% Project, EPQ graded A*, and an IELTS score of 7.5.',
-			meta: ['AMC 12', 'BMO Gold', 'CCC Gold', 'Physics Bowl Gold'],
+			body: 'Selected recognitions include AMC 12 A/B AIME qualification, BMO Gold, CCC Gold, Physics Bowl Component 2 Gold, SMC Gold, ACSL Round 3, RobotMaster national finals qualification, Global Game Jam Top 1% Project, EPQ graded A*, and an IELTS score of 7.5.',
+			meta: ['AMC 12', 'BMO Gold', 'CCC Gold', 'RobotMaster nationals'],
 			variant: 'pixel'
 		},
 		{
